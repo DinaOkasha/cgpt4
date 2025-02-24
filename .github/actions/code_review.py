@@ -5,7 +5,7 @@ import textwrap
 import openai
 from github import Github
 
-TOKEN_LIMIT = 4096  # OpenAI's token limit for API calls
+TOKEN_LIMIT = 4096  # Adjust token limit based on OpenAI's requirements
 
 def get_file_content(file_path):
     """ Reads the content of a file. """
@@ -30,16 +30,17 @@ def get_changed_files(pr):
 
 def send_to_openai(files):
     """ Sends changed files to OpenAI for review. """
+    client = openai.OpenAI()  # Initialize OpenAI client
     code = '\n'.join(files.values())
     chunks = textwrap.wrap(code, TOKEN_LIMIT)
 
     reviews = []
     for chunk in chunks:
-        message = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4",
             messages=[{"role": "user", "content": f"Review the following code:\n{chunk}"}],
         )
-        reviews.append(message['choices'][0]['message']['content'])
+        reviews.append(response.choices[0].message.content)
     
     return "\n".join(reviews)
 
@@ -52,11 +53,14 @@ def main():
     with open(os.getenv('GITHUB_EVENT_PATH')) as json_file:
         event = json.load(json_file)
 
-    pr = Github(os.getenv('GITHUB_TOKEN')).get_repo(event['repository']['full_name']).get_pull(event['number'])
-    
+    g = Github(os.getenv('GITHUB_TOKEN'))
+    repo = g.get_repo(event['repository']['full_name'])
+    pr = repo.get_pull(event['number'])
+
     files = get_changed_files(pr)
     review = send_to_openai(files)
     post_comment(pr, review)
 
 if __name__ == "__main__":
     main()
+
