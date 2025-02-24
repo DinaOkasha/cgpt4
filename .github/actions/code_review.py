@@ -37,7 +37,7 @@ def send_to_openai(files):
     reviews = []
     for chunk in chunks:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": f"Review the following code:\n{chunk}"}],
         )
         reviews.append(response.choices[0].message.content)
